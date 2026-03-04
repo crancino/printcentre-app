@@ -1,0 +1,33 @@
+﻿modules:
+  jira:serviceManagement:portalRequestViewAction:
+    - key: printcentre-button
+      title: Print Request
+      function: main
+      icon: https://developer.atlassian.com/platform/forge/images/icons/print-icon.svg
+      render: native
+      resolver:
+        function: resolver
+      # Display conditions to scope app to specific projects
+      conditions:
+        - condition: project
+          params:
+            projectKeys:
+              - MP  # Add your project keys here
+              # - EXAMPLE
+              # - ANOTHER
+  function:
+    - key: main
+      handler: index.run
+    - key: resolver
+      handler: index.resolver
+  
+app:
+  id: ari:cloud:ecosystem::app/YOUR_APP_ID
+  runtime:
+    name: nodejs20.x
+  
+permissions:
+  scopes:
+    - read:jira-work
+    - read:servicedesk-request
+    - storage:app

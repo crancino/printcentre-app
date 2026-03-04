@@ -1,0 +1,18 @@
+﻿{
+  "name": "princentre-app",
+  "version": "1.0.0",
+  "description": "Forge app for printing in Jira Service Management",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "IIT",
+  "license": "ISC",
+  "dependencies": {
+    "@forge/react": "^10.0.0",
+    "@forge/bridge": "^3.0.0"
+  },
+  "devDependencies": {
+    "@forge/cli": "^10.0.0"
+  }
+}
