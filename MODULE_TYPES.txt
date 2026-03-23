@@ -1,0 +1,22 @@
+﻿# Forge Module Types for Jira Service Management
+
+## Available JSM Modules:
+
+1. **jira:serviceManagementPortalRequestViewAction** 
+   - Button/action in JSM portal request view (what we want)
+
+2. **jira:serviceManagementQueuePage**
+   - Custom page in JSM queue
+
+3. **jira:serviceManagementWorkspaceGlobalPage**
+   - Global page in JSM workspace
+
+4. **jira:customField**
+   - Custom field in Jira/JSM
+
+5. **jira:globalPage**
+   - Global page in Jira
+
+The correct format is: jira:serviceManagementPortalRequestViewAction
+(Note: no colons between serviceManagement and PortalRequestViewAction)
+

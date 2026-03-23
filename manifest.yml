@@ -1,33 +1,54 @@
-﻿modules:
-  jira:serviceManagement:portalRequestViewAction:
-    - key: printcentre-button
+modules:
+  jira:issuePanel:
+    - key: printcentre-agent-panel
       title: Print Request
-      function: main
       icon: https://developer.atlassian.com/platform/forge/images/icons/print-icon.svg
-      render: native
+      resource: agent-panel-resource
       resolver:
         function: resolver
-      # Display conditions to scope app to specific projects
-      conditions:
-        - condition: project
-          params:
-            projectKeys:
-              - MP  # Add your project keys here
-              # - EXAMPLE
-              # - ANOTHER
-  function:
-    - key: main
-      handler: index.run
-    - key: resolver
-      handler: index.resolver
+      displayConditions:
+        projectKey: "PS" # Limits the agent panel to project PS
+
+  jiraServiceManagement:portalRequestDetail: 
+    - key: printcentre-portal-panel
+      title: PDF Print Files
+      resource: portal-panel-resource
+      resolver:
+        function: resolver
+      unlicensedAccess:
+        - customer
+      displayConditions:
+        projectKey: "PS" # Limits the portal panel to project PS
   
+  function:
+    - key: resolver
+      handler: resolver.handler
+
+resources:
+  - key: agent-panel-resource
+    path: src/agent-panel
+  
+  - key: portal-panel-resource
+    path: src/portal-panel/build
+
 app:
-  id: ari:cloud:ecosystem::app/YOUR_APP_ID
+  id: ari:cloud:ecosystem::app/42520044-c0dc-47ab-b1c4-5a6d85ef664a
   runtime:
     name: nodejs20.x
-  
+
 permissions:
+  content:
+    styles:
+      - unsafe-inline
+  external:
+    fetch:
+      backend:
+        - address: https://jiratoswitchprem.blob.core.windows.net
+      client:
+        - address: https://jiratoswitchprem.blob.core.windows.net
   scopes:
     - read:jira-work
+    - read:jira-user
+    - write:jira-work
     - read:servicedesk-request
     - storage:app

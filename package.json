@@ -1,18 +1,31 @@
-﻿{
-  "name": "princentre-app",
-  "version": "1.0.0",
-  "description": "Forge app for printing in Jira Service Management",
-  "main": "src/index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "IIT",
-  "license": "ISC",
-  "dependencies": {
-    "@forge/react": "^10.0.0",
-    "@forge/bridge": "^3.0.0"
-  },
-  "devDependencies": {
-    "@forge/cli": "^10.0.0"
-  }
+{
+    "scripts": {
+        "test": "echo \"Error: no test specified\" \u0026\u0026 exit 1"
+    },
+    "description": "Forge app for printing in Jira Service Management",
+    "dependencies": {
+        "@forge/react": "^10.0.0",
+        "@forge/resolver": "^1.5.0",
+        "@forge/api": "^3.0.0",
+        "@forge/bridge": "^3.2.0",
+        "@atlaskit/button": "^17.2.0",
+        "@atlaskit/form": "^9.0.6",
+        "@atlaskit/spinner": "^17.0.0",
+        "@atlaskit/flag": "^15.0.0",
+        "@atlaskit/banner": "^12.0.0",
+        "@atlaskit/modal-dialog": "^12.0.0",
+        "@atlaskit/icon": "^22.0.0",
+        "@azure/storage-blob": "^12.26.0",
+        "react": "^18",
+        "react-dom": "^18",
+        "styled-components": "^6.1.8"
+    },
+    "version": "2.0.0",
+    "author": "IIT",
+    "name": "princentre-app",
+    "main": "src/resolver.js",
+    "devDependencies": {
+        "@forge/cli": "^10.0.0"
+    },
+    "license": "ISC"
 }

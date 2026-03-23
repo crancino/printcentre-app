@@ -1,0 +1,2 @@
+"use strict";(globalThis.webpackChunkportal_panel=globalThis.webpackChunkportal_panel||[]).push([[694],{7861(a,t,e){e.r(t),e.d(t,{default:()=>d});const d='\nhtml[data-color-mode="light"][data-theme~="light:light"], [data-subtree-theme][data-color-mode="light"][data-theme~="light:light"],\nhtml[data-color-mode="dark"][data-theme~="dark:light"], [data-subtree-theme][data-color-mode="dark"][data-theme~="dark:light"] {\n  color-scheme: dark;\n  --ds-background-disabled: #B3DF72;\n}\n'}}]);
+//# sourceMappingURL=@atlaskit-internal_atlassian-dark-future.812dbff9.chunk.js.map
