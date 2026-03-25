@@ -175,7 +175,7 @@ function AgentPanel() {
     }
 
     return h('div', { style: { padding: '20px', fontFamily: 'system-ui, -apple-system, sans-serif' } }, [
-        h('h3', { key: 'title', style: { marginTop: 0 } }, 'Print Request Files'),
+        h('h3', { key: 'title', style: { marginTop: 0 } }, 'PDF Attachments'),
         
         h('div', { key: 'info', style: { padding: '10px', backgroundColor: '#f4f5f7', borderRadius: '4px', marginBottom: '16px' } }, [
             h('strong', { key: 'label' }, 'Issue: '),

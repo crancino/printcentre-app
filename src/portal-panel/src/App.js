@@ -84,6 +84,9 @@ const ProgressStatus = styled.span`
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
 `;
 
+const FlagMessage = styled.span`
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+`;
 
 function App() {
     // Progress is now used for the 'percentage' label
@@ -129,19 +132,27 @@ function App() {
      * Helper to add a success flag after upload.
      */
     const addSuccessFlag = (message) => {
-        const id = Date.now();
-        const newFlag = (
-            <Flag
-                key={id}
-                id={id}
-                icon={<CheckCircleIcon label="Success" primaryColor="#00B386" />}
-                title="Upload Complete"
-                description={message}
-                actions={[{ content: 'Dismiss', onClick: () => handleDismissFlag(id) }]}
-            />
-        );
-        setFlags(currentFlags => [newFlag]);
+    const id = Date.now();
+    
+    const flagStyle = {
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif'
     };
+
+    const newFlag = (
+        <Flag
+            key={id}
+            id={id}
+            onDismissed={() => handleDismissFlag(id)} 
+            icon={<CheckCircleIcon label="Success" primaryColor="#00B386" />}
+            title={<span style={flagStyle}>Upload Complete</span>}
+            description={<span style={flagStyle}>{message}</span>}
+        />
+    );
+    setFlags(currentFlags => [newFlag]);
+    
+    // Refresh the Jira comments box immediately
+    view.refresh(); 
+};
 
     const handleDismissFlag = (id) => {
         setFlags(currentFlags => currentFlags.filter(flag => flag.props.id !== id));
@@ -182,6 +193,8 @@ function App() {
             // *** Clear the files state in App.js and reset FileAttachment component ***
             await setFiles([]);
             setFileAttachmentKey(prevKey => prevKey + 1); 
+            // REFRESH JIRA COMMENTS
+            view.refresh();
 
         } catch (e) {
             console.log("Error during upload or comment creation: " + e);
@@ -382,9 +395,7 @@ function App() {
                 {({formProps}) => {
                     return (
                         <form {...formProps}>
-                            <FormHeader title={TITLE_HEADER}/>
                             <p>Click on the <b>upload button</b> to submit PDF files for printing</p>
-                            
                             {/* --- UI KIT CHANGE: PDF Validation Error Display using Banner --- */}
                             {validationError && (
                                 <Banner 

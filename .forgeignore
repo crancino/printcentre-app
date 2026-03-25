@@ -1,0 +1,31 @@
+# Ignore node_modules in source directories (we only need the built files)
+src/portal-panel/node_modules/
+src/portal-panel/package-lock.json
+src/agent-panel/node_modules/
+src/agent-panel/package-lock.json
+
+# Ignore source files (we only need the built output)
+src/portal-panel/src/
+src/portal-panel/public/
+src/agent-panel/src/
+src/agent-panel/public/
+
+# Keep only the build directories
+!src/portal-panel/build/
+!src/agent-panel/build/
+
+# Ignore other unnecessary files
+*.log
+.DS_Store
+nbproject/
+*.md
+*.txt
+node_modules/
+.git/
+.gitignore
+
+# Keep manifest and main files
+!manifest.yml
+!src/index.js
+!src/resolver.js
+!src/panel.js

@@ -1,46 +1,113 @@
-import React, { useState, useEffect } from 'react';
-import { invoke } from '@forge/bridge';
+import React, {useEffect, useState, useCallback} from 'react';
+import {invoke, view} from '@forge/bridge';
+import styled from 'styled-components';
+import Button, { ButtonGroup } from '@atlaskit/button';
+import Form, { FormFooter, FormHeader, Field } from '@atlaskit/form';
+import {
+    BUTTON_LABEL_SUBMIT,
+    ERROR_MESSAGE_CONFIGURATION,
+    ERROR_MESSAGE_UPLOAD_FAILED,
+    SUCCESS_MESSAGE_UPLOAD,
+    INFO_MESSAGE_UPLOADING,
+    ERROR_MESSAGE_POST_COMMENT_FAILED,
+    BANNER_TITLE_SUCCESS,
+    BANNER_TITLE_ERROR,
+    FIELD_LABEL_PDF_UPLOAD,
+    FIELD_DESCRIPTION_PDF_UPLOAD
+} from './errorMessages';
+import FileAttachment from './FileAttachment';
+import Banner from '@atlaskit/banner';
+import WarningIcon from '@atlaskit/icon/glyph/warning';
+import SuccessIcon from '@atlaskit/icon/glyph/check-circle';
+import Spinner from '@atlaskit/spinner';
+
+const Content = styled.div`
+    margin: ${({isIssueView}) => isIssueView ? '24px 24px 0' : 0};
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+    form {
+        overflow-y: auto;
+        padding-right: 10px;
+        height: 500px;
+    }
+`;
+
+const ProgressContainer = styled.div`
+    margin: 16px 0;
+    padding: 16px;
+    background-color: #f4f5f7;
+    border-radius: 4px;
+`;
+
+const ProgressBarContainer = styled.div`
+    width: 100%;
+    height: 8px;
+    background-color: #dfe1e6;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 8px;
+`;
+
+const ProgressBarFill = styled.div`
+    height: 100%;
+    background-color: #0052cc;
+    transition: width 0.3s ease;
+    border-radius: 4px;
+`;
+
+const ProgressLabel = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+    font-size: 14px;
+    color: #172B4D;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+`;
+
+const ProgressStatus = styled.span`
+    font-weight: 500;
+    color: #172B4D;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+`;
 
 function App() {
-    const [issue, setIssue] = useState(null);
+    const [context, setContext] = useState(undefined);
     const [files, setFiles] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [selectedFiles, setSelectedFiles] = useState([]);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [message, setMessage] = useState('');
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [currentFileName, setCurrentFileName] = useState('');
+    const [bannerMessage, setBannerMessage] = useState(null);
+    const [bannerType, setBannerType] = useState('');
 
     useEffect(() => {
-        async function loadIssueData() {
-            try {
-                const context = await invoke('getContext');
-                setIssue(context);
-                
-                const issueKey = context?.extension?.issue?.key;
-                if (issueKey) {
-                    const result = await invoke('getFiles', { issueKey });
-                    setFiles(result.files || []);
-                }
-            } catch (error) {
-                console.error('Error loading issue data:', error);
-            } finally {
-                setLoading(false);
-            }
-        }
-        loadIssueData();
+        view.theme.enable();
+        invoke('getContext').then(setContext);
     }, []);
 
-    const handleFileChange = (event) => {
-        const files = Array.from(event.target.files);
-        setSelectedFiles(files);
-        setMessage('');
+    const showBanner = (message, type) => {
+        setBannerMessage(message);
+        setBannerType(type);
+        setTimeout(() => {
+            setBannerMessage(null);
+            setBannerType('');
+        }, 5000);
     };
 
-    const uploadLargeFileToAzure = async (file, fileName, sasUrl) => {
-        const chunkSize = 4 * 1024 * 1024; // 4MB chunks
+    const uploadLargeFileToAzure = async (file, fileName, sasUrl, onProgress) => {
+        const chunkSize = 4 * 1024 * 1024;
         const totalChunks = Math.ceil(file.size / chunkSize);
         const blockIds = [];
 
-        const [baseUrl, sasToken] = sasUrl.split('?');
+        // Validate and parse the SAS URL
+        let containerUrl;
+        try {
+            containerUrl = new URL(sasUrl);
+        } catch (urlError) {
+            throw new Error(`Invalid SAS URL format: ${sasUrl}. Please check your SAS_URL environment variable.`);
+        }
+        
+        const baseUrl = `${containerUrl.origin}/jira-to-switch`;
+        const sasToken = containerUrl.search;
 
         for (let i = 0; i < totalChunks; i++) {
             const start = i * chunkSize;
@@ -51,6 +118,7 @@ function App() {
             blockIds.push(blockId);
 
             const uploadUrl = `${baseUrl}/${encodeURIComponent(fileName)}?comp=block&blockid=${encodeURIComponent(blockId)}&${sasToken.slice(1)}`;
+
             const response = await fetch(uploadUrl, {
                 method: 'PUT',
                 headers: {
@@ -61,15 +129,20 @@ function App() {
             });
 
             if (!response.ok) {
-                throw new Error(`Failed to upload block ${i}: ${response.statusText}`);
+                throw new Error(`Failed to upload chunk ${i + 1}/${totalChunks}`);
+            }
+
+            if (onProgress) {
+                const progress = Math.round(((i + 1) / totalChunks) * 100);
+                onProgress(progress);
             }
         }
 
-        // Commit all blocks
         const blockListXml = `<?xml version="1.0" encoding="utf-8"?>
             <BlockList>${blockIds.map(id => `<Latest>${id}</Latest>`).join('')}</BlockList>`;
 
         const commitUrl = `${baseUrl}/${encodeURIComponent(fileName)}?comp=blocklist&${sasToken.slice(1)}`;
+
         const commitResponse = await fetch(commitUrl, {
             method: 'PUT',
             headers: {
@@ -80,150 +153,162 @@ function App() {
         });
 
         if (!commitResponse.ok) {
-            throw new Error(`Failed to commit blocks: ${commitResponse.statusText}`);
+            throw new Error('Failed to commit file blocks');
         }
     };
 
-    const handleSubmit = async () => {
-        if (selectedFiles.length === 0) {
-            setMessage('Please select at least one file');
-            return;
-        }
-
-        setIsSubmitting(true);
-        setMessage('');
-
+    const uploadFiles = async (file, fileName) => {
         try {
             const sasUrl = await invoke('getSasUrl');
             
-            // Upload files to Azure
-            for (const file of selectedFiles) {
-                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-                const fileName = `${issue.extension.issue.key}_${timestamp}_${file.name}`;
-                await uploadLargeFileToAzure(file, fileName, sasUrl);
+            if (!sasUrl || typeof sasUrl !== 'string' || sasUrl.trim() === '') {
+                throw new Error(ERROR_MESSAGE_CONFIGURATION);
             }
-
-            setMessage(`Successfully uploaded ${selectedFiles.length} file(s)!`);
-            setSelectedFiles([]);
             
-            // Reload files list
-            const issueKey = issue?.extension?.issue?.key;
-            if (issueKey) {
-                const result = await invoke('getFiles', { issueKey });
-                setFiles(result.files || []);
-            }
+            await uploadLargeFileToAzure(file, fileName, sasUrl, (progress) => {
+                setUploadProgress(progress);
+            });
+            
+            console.log(`File ${fileName} uploaded successfully`);
         } catch (error) {
             console.error('Upload error:', error);
-            setMessage(`Error: ${error.message}`);
-        } finally {
-            setIsSubmitting(false);
+            throw error;
         }
     };
 
-    const handleCancel = () => {
-        setSelectedFiles([]);
-        setMessage('');
+    const postCommentToIssue = async (issueKey, fileNames) => {
+        try {
+            const commentText = `PDF files uploaded to Azure Blob Storage:\n${fileNames.map(name => `• ${name}`).join('\n')}`;
+            await invoke('PostComment', { issueKey, commentText });
+            console.log('Comment posted successfully');
+        } catch (error) {
+            console.error('Error posting comment:', error);
+            throw new Error(ERROR_MESSAGE_POST_COMMENT_FAILED);
+        }
     };
 
-    if (loading) {
-        return <div style={{ padding: '20px' }}>Loading...</div>;
+    const onSubmit = useCallback(async (formData) => {
+        if (!files || files.length === 0) {
+            return;
+        }
+
+        setIsUploading(true);
+        setUploadProgress(0);
+        
+        const issueKey = context?.extension?.issue?.key;
+        const uploadedFileNames = [];
+
+        try {
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                setCurrentFileName(file.name);
+                
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const fileName = `${issueKey}_${timestamp}_${file.name}`;
+                
+                await uploadFiles(file, fileName);
+                uploadedFileNames.push(file.name);
+                
+                setUploadProgress(0);
+            }
+
+            await postCommentToIssue(issueKey, uploadedFileNames);
+            
+            showBanner(SUCCESS_MESSAGE_UPLOAD, 'success');
+            setFiles([]);
+            setCurrentFileName('');
+            
+        } catch (error) {
+            console.error('Error during upload:', error);
+            showBanner(error.message || ERROR_MESSAGE_UPLOAD_FAILED, 'error');
+        } finally {
+            setIsUploading(false);
+            setUploadProgress(0);
+            setCurrentFileName('');
+        }
+    }, [files, context]);
+
+    const handleFilesChange = useCallback((newFiles) => {
+        setFiles(newFiles);
+    }, []);
+
+    if (!context) {
+        return <div>Loading...</div>;
     }
 
     return (
-        <div style={{ padding: '20px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-            <h3 style={{ marginTop: 0 }}>PDF Attachments</h3>
-            
-            <div style={{ padding: '10px', backgroundColor: '#f4f5f7', borderRadius: '4px', marginBottom: '16px' }}>
-                <strong>Issue: </strong>
-                <span>{issue?.extension?.issue?.key || 'Unknown'}</span>
-            </div>
+        <Content isIssueView={true}>
+            {bannerMessage && (
+                <Banner
+                    icon={bannerType === 'success' ? <SuccessIcon label="Success" primaryColor="#36B37E" /> : <WarningIcon label="Error" primaryColor="#DE350B" />}
+                    appearance={bannerType === 'success' ? 'announcement' : 'error'}
+                >
+                    {bannerMessage}
+                </Banner>
+            )}
 
-            {/* Upload section */}
-            <div style={{ marginBottom: '20px', padding: '16px', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#fafbfc' }}>
-                <h4 style={{ marginTop: 0, marginBottom: '12px' }}>Upload Files</h4>
-                <input
-                    type="file"
-                    multiple
-                    accept=".pdf"
-                    onChange={handleFileChange}
-                    style={{ display: 'block', marginBottom: '12px' }}
-                />
-                {selectedFiles.length > 0 && (
-                    <div style={{ marginBottom: '12px', fontSize: '14px', color: '#666' }}>
-                        Selected: {selectedFiles.map(f => f.name).join(', ')}
-                    </div>
-                )}
-                
-                {message && (
-                    <div style={{
-                        padding: '12px',
-                        marginBottom: '12px',
-                        backgroundColor: message.includes('Error') ? '#ffebe6' : '#e3fcef',
-                        color: message.includes('Error') ? '#de350b' : '#006644',
-                        borderRadius: '4px',
-                        border: `1px solid ${message.includes('Error') ? '#ffbdad' : '#abf5d1'}`
-                    }}>
-                        {message}
-                    </div>
-                )}
+            <Form onSubmit={onSubmit}>
+                {({formProps}) => (
+                    <form {...formProps}>
+                        <FormHeader title="PDF Attachments" />
+                        
+                        <Field 
+                            name="pdfFiles" 
+                            label={FIELD_LABEL_PDF_UPLOAD}
+                            isRequired
+                        >
+                            {() => (
+                                <>
+                                    <p style={{fontSize: '12px', color: '#6B778C', marginTop: '4px'}}>
+                                        {FIELD_DESCRIPTION_PDF_UPLOAD}
+                                    </p>
+                                    <FileAttachment
+                                        files={files}
+                                        onFilesChange={handleFilesChange}
+                                        isDisabled={isUploading}
+                                    />
+                                </>
+                            )}
+                        </Field>
 
-                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                    <button
-                        onClick={handleCancel}
-                        disabled={isSubmitting}
-                        style={{
-                            display:'none',
-                            padding: '8px 16px',
-                            border: '1px solid #ddd',
-                            borderRadius: '4px',
-                            backgroundColor: '#fff',
-                            cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                            opacity: isSubmitting ? 0.6 : 1
-                        }}
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={handleSubmit}
-                        disabled={isSubmitting || selectedFiles.length === 0}
-                        style={{
-                            padding: '8px 16px',
-                            border: 'none',
-                            borderRadius: '4px',
-                            backgroundColor: isSubmitting || selectedFiles.length === 0 ? '#ccc' : '#0052CC',
-                            color: 'white',
-                            cursor: isSubmitting || selectedFiles.length === 0 ? 'not-allowed' : 'pointer'
-                        }}
-                    >
-                        {isSubmitting ? 'Uploading...' : 'Submit'}
-                    </button>
-                </div>
-            </div>
-
-            {/* Files list section */}
-            <div>
-                <h4>Uploaded Files</h4>
-                {files.length === 0 ? (
-                    <p style={{ color: '#666', fontStyle: 'italic' }}>No files uploaded yet.</p>
-                ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {files.map((file, idx) => (
-                            <div key={idx} style={{
-                                padding: '12px',
-                                border: '1px solid #ddd',
-                                borderRadius: '4px',
-                                backgroundColor: '#fafbfc'
-                            }}>
-                                <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{file.name}</div>
-                                <div style={{ fontSize: '12px', color: '#666' }}>
-                                    Uploaded: {new Date(file.uploadedAt).toLocaleString()}
+                        {isUploading && (
+                            <ProgressContainer>
+                                <ProgressLabel>
+                                    <span>Uploading: {currentFileName}</span>
+                                    <ProgressStatus>{uploadProgress}%</ProgressStatus>
+                                </ProgressLabel>
+                                <ProgressBarContainer>
+                                    <ProgressBarFill style={{ width: `${uploadProgress}%` }} />
+                                </ProgressBarContainer>
+                                <div style={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    marginTop: '12px',
+                                    fontSize: '14px',
+                                    color: '#5E6C84'
+                                }}>
+                                    <Spinner size="small" />
+                                    <span style={{ marginLeft: '8px' }}>{INFO_MESSAGE_UPLOADING}</span>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            </ProgressContainer>
+                        )}
+
+                        <FormFooter>
+                            <ButtonGroup>
+                                <Button 
+                                    type="submit" 
+                                    appearance="primary" 
+                                    isDisabled={files.length === 0 || isUploading}
+                                    isLoading={isUploading}
+                                >
+                                    {BUTTON_LABEL_SUBMIT}
+                                </Button>
+                            </ButtonGroup>
+                        </FormFooter>
+                    </form>
                 )}
-            </div>
-        </div>
+            </Form>
+        </Content>
     );
 }
 

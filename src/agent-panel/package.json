@@ -1,5 +1,5 @@
 {
-  "name": "portal-panel",
+  "name": "agent-panel",
   "version": "1.0.0",
   "private": true,
   "homepage": ".",
@@ -22,10 +22,21 @@
     ]
   },
   "dependencies": {
+    "@atlaskit/banner": "^14.0.25",
+    "@atlaskit/button": "^23.10.4",
+    "@atlaskit/flag": "^15.0.0",
+    "@atlaskit/form": "^15.4.2",
+    "@atlaskit/icon": "^22.0.0",
+    "@atlaskit/modal-dialog": "^14.11.5",
+    "@atlaskit/spinner": "^17.0.0",
+    "@atlaskit/textfield": "^8.2.3",
+    "@azure/storage-blob": "^12.31.0",
+    "@forge/bridge": "^3.0.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-scripts": "^5.0.1",
-    "@forge/bridge": "^3.0.5",
     "styled-components": "^6.1.8"
+  },
+  "devDependencies": {
+    "react-scripts": "^5.0.1"
   }
 }

@@ -272,7 +272,7 @@ async function initApp() {
     }
 
     return h('div', { style: { padding: '20px', fontFamily: 'system-ui, -apple-system, sans-serif' } }, [
-        h('h2', { key: 'title', style: { marginTop: 0 } }, 'PDF Print files'),
+        /*h('h2', { key: 'title', style: { marginTop: 0 } }, 'PDF Print files'),*/
         
         issue && h('div', {
             key: 'issue-info',

@@ -1,14 +1,4 @@
 modules:
-  jira:issuePanel:
-    - key: printcentre-agent-panel
-      title: Print Request
-      icon: https://developer.atlassian.com/platform/forge/images/icons/print-icon.svg
-      resource: agent-panel-resource
-      resolver:
-        function: resolver
-      displayConditions:
-        projectKey: "PS" # Limits the agent panel to project PS
-
   jiraServiceManagement:portalRequestDetail: 
     - key: printcentre-portal-panel
       title: PDF Print Files
@@ -24,10 +14,7 @@ modules:
     - key: resolver
       handler: resolver.handler
 
-resources:
-  - key: agent-panel-resource
-    path: src/agent-panel
-  
+resources:  
   - key: portal-panel-resource
     path: src/portal-panel/build
 
